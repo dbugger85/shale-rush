@@ -1,0 +1,915 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+<meta name="theme-color" content="#1b1720">
+<title>Shale Rush</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='14' fill='%231b1720'/%3E%3Cpath d='M32 8 L22 40 H42 Z' fill='none' stroke='%23efe9dc' stroke-width='3'/%3E%3Cpath d='M32 40 V52 H54' fill='none' stroke='%23ffb02e' stroke-width='4' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#1b1720; --panel:rgba(24,20,30,.86); --line:rgba(255,255,255,.12);
+  --ink:#f6f0e6; --muted:#c3b8a8; --accent:#ffb02e; --accent-ink:#2a1a05;
+  --good:#7fdc95; --bad:#ff7a66;
+  --head:"Bebas Neue",Impact,"Arial Narrow",sans-serif;
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;background:var(--bg);overflow:hidden;color:var(--ink);
+  font-family:system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;
+  -webkit-user-select:none;user-select:none;touch-action:none;-webkit-tap-highlight-color:transparent}
+canvas{position:fixed;inset:0;width:100%;height:100%;display:block}
+button{font:inherit;color:inherit;border:0;cursor:pointer}
+
+#hud{position:fixed;left:0;right:0;top:0;padding:calc(env(safe-area-inset-top) + 8px) 10px 0;pointer-events:none;height:calc(env(safe-area-inset-top) + 104px)}
+#top{display:flex;align-items:center;gap:8px}
+#lvl{flex:1;min-width:0;font-family:var(--head);font-size:22px;letter-spacing:.5px;line-height:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;text-shadow:0 1px 2px rgba(0,0,0,.5)}
+#lvl small{display:block;font-family:system-ui,sans-serif;font-size:11px;letter-spacing:.3px;color:rgba(255,255,255,.8);margin-top:2px}
+.pill{background:var(--panel);border:1px solid var(--line);border-radius:999px;padding:6px 11px;font-weight:700;font-size:14px;font-variant-numeric:tabular-nums;white-space:nowrap}
+#money .lbl{color:var(--muted);font-weight:500;margin-right:4px;font-size:12px}
+#restart{pointer-events:auto;width:36px;height:36px;border-radius:50%;background:var(--panel);border:1px solid var(--line);font-size:18px;display:grid;place-items:center}
+#tip{margin-top:8px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:14px;line-height:1.3;min-height:52px;display:flex;align-items:center;transition:border-color .2s}
+#tip.warn{border-color:var(--bad)}
+#tip.good{border-color:var(--good)}
+
+#rock{position:fixed;left:10px;bottom:calc(env(safe-area-inset-bottom) + 84px);background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;font-size:12px;line-height:1.35;pointer-events:none;display:none;font-variant-numeric:tabular-nums}
+#rock b{font-size:13px}
+#rock i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px;border:1px solid rgba(255,255,255,.35)}
+
+#bottom{position:fixed;left:0;right:0;bottom:0;height:calc(env(safe-area-inset-bottom) + 76px);padding:10px 14px calc(env(safe-area-inset-bottom) + 12px);display:flex;justify-content:center;align-items:center;pointer-events:none}
+#act{pointer-events:auto;min-width:220px;height:54px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-family:var(--head);font-size:28px;letter-spacing:1px;box-shadow:0 6px 0 #a8650b,0 10px 24px rgba(0,0,0,.4);transition:transform .08s,opacity .2s}
+#act:active{transform:translateY(4px);box-shadow:0 2px 0 #a8650b}
+#act:disabled{opacity:.45;filter:grayscale(.6)}
+#act.hide{display:none}
+
+.overlay{position:fixed;inset:0;display:flex;align-items:center;justify-content:center;padding:calc(env(safe-area-inset-top) + 16px) 16px calc(env(safe-area-inset-bottom) + 16px);background:rgba(14,11,18,.55);backdrop-filter:blur(3px);-webkit-backdrop-filter:blur(3px);z-index:10;overflow:auto}
+.overlay.hidden{display:none}
+.card{width:100%;max-width:400px;background:#221d29;border:1px solid var(--line);border-radius:22px;padding:22px 20px;box-shadow:0 20px 60px rgba(0,0,0,.5);margin:auto}
+.card h1{font-family:var(--head);font-weight:400;font-size:64px;line-height:.9;margin:0;letter-spacing:1px;color:var(--accent)}
+.card h2{font-family:var(--head);font-weight:400;font-size:34px;line-height:1;margin:0;letter-spacing:.5px}
+.card p{color:var(--muted);line-height:1.45;margin:10px 0}
+.steps{display:grid;grid-template-columns:1fr auto 1fr auto 1fr auto 1fr;align-items:center;gap:4px;margin:18px 0 20px;text-align:center;font-size:12px;color:var(--muted)}
+.steps div b{display:block;font-size:24px;margin-bottom:3px}
+.steps span{color:rgba(255,255,255,.3)}
+.big{width:100%;height:56px;border-radius:16px;background:var(--accent);color:var(--accent-ink);font-family:var(--head);font-size:30px;letter-spacing:1px;box-shadow:0 6px 0 #a8650b}
+.big:active{transform:translateY(4px);box-shadow:0 2px 0 #a8650b}
+.ghost{width:100%;height:46px;border-radius:14px;background:transparent;border:1px solid var(--line);margin-top:10px;font-weight:600}
+.best{margin-top:12px;text-align:center;font-size:13px;color:var(--muted)}
+.stars{font-size:44px;letter-spacing:6px;text-align:center;margin:8px 0 2px;color:var(--accent)}
+.stars .off{color:rgba(255,255,255,.15)}
+.profit{text-align:center;font-family:var(--head);font-size:52px;line-height:1}
+.profit.neg{color:var(--bad)}
+.profit.pos{color:var(--good)}
+.sub{text-align:center;font-size:12px;color:var(--muted);margin-bottom:14px}
+table{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+td{padding:5px 0;border-bottom:1px solid rgba(255,255,255,.06)}
+td:last-child{text-align:right;font-weight:600}
+tr.neg td:last-child{color:var(--bad)}
+.box{margin-top:12px;border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.4}
+.box b{display:block;font-size:11px;letter-spacing:.8px;text-transform:uppercase;margin-bottom:3px}
+.box.tipbox{background:rgba(255,176,46,.12);border:1px solid rgba(255,176,46,.35)}
+.box.tipbox b{color:var(--accent)}
+.box.fact{background:rgba(255,255,255,.05);border:1px solid var(--line);color:var(--muted)}
+.box.fact b{color:var(--ink)}
+.thresh{display:flex;justify-content:space-between;font-size:11.5px;color:var(--muted);margin-top:10px}
+</style>
+</head>
+<body>
+<canvas id="c"></canvas>
+
+<div id="hud">
+  <div id="top">
+    <div id="lvl"></div>
+    <div id="money" class="pill"></div>
+    <button id="restart" aria-label="Restart level">↻</button>
+  </div>
+  <div id="tip"></div>
+</div>
+<div id="rock"></div>
+<div id="bottom"><button id="act" class="hide"></button></div>
+
+<div id="title" class="overlay">
+  <div class="card">
+    <h1>Shale Rush</h1>
+    <p>Oil is trapped in tight shale rock deep under Texas. Drill down, turn sideways into the shale, blast it open and pump out as much oil as you can. Make the biggest profit</p>
+    <div class="steps">
+      <div><b>🔭</b>Find oil</div><span>›</span>
+      <div><b>⛏️</b>Drill</div><span>›</span>
+      <div><b>💥</b>Frack</div><span>›</span>
+      <div><b>🛢️</b>Pump</div>
+    </div>
+    <button class="big" id="play">Start drilling</button>
+    <div class="best" id="titleBest"></div>
+  </div>
+</div>
+
+<div id="result" class="overlay hidden">
+  <div class="card">
+    <h2 id="rName"></h2>
+    <div class="stars" id="rStars"></div>
+    <div class="profit" id="rProfit"></div>
+    <div class="sub">profit</div>
+    <table id="rTable"></table>
+    <div class="thresh" id="rThresh"></div>
+    <div class="box tipbox"><b>Tip</b><span id="rTip"></span></div>
+    <div class="box fact"><b>Did you know?</b><span id="rFact"></span></div>
+    <button class="big" id="again" style="margin-top:16px">Try again</button>
+    <button class="ghost" id="toTitle">Menu</button>
+  </div>
+</div>
+
+<script>
+'use strict';
+// ---------- helpers ----------
+const $ = id => document.getElementById(id);
+const clamp = (v, a, b) => v < a ? a : v > b ? b : v;
+const lerp = (a, b, t) => a + (b - a) * t;
+const gauss = (x, m, s) => Math.exp(-((x - m) ** 2) / (2 * s * s));
+const fmtM = v => (v < 0 ? '−$' : '$') + Math.abs(v).toFixed(Math.abs(v) >= 100 ? 0 : 1) + 'M';
+const fmtN = v => Math.round(v).toLocaleString('en-US');
+function mulberry32(a){return function(){a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function makeNoise(rng, cell, w, h){
+  const gw = Math.ceil(w / cell) + 2, gh = Math.ceil(h / cell) + 2, v = new Float32Array(gw * gh);
+  for (let i = 0; i < v.length; i++) v[i] = rng();
+  return (x, y) => {
+    const fx = x / cell, fy = y / cell, ix = Math.floor(fx), iy = Math.floor(fy);
+    let tx = fx - ix, ty = fy - iy; tx = tx * tx * (3 - 2 * tx); ty = ty * ty * (3 - 2 * ty);
+    const a = v[iy*gw+ix], b = v[iy*gw+ix+1], c = v[(iy+1)*gw+ix], d = v[(iy+1)*gw+ix+1];
+    return lerp(lerp(a, b, tx), lerp(c, d, tx), ty);
+  };
+}
+const store = {
+  get(k){ try { return JSON.parse(localStorage.getItem('shalerush.' + k)); } catch(e){ return null; } },
+  set(k, v){ try { localStorage.setItem('shalerush.' + k, JSON.stringify(v)); } catch(e){} }
+};
+
+// ---------- world ----------
+const W = 120, H = 170, UNIT_M = 25;          // 1 world unit = 25 m
+const TURN = 3.0 * Math.PI / 180;             // max turn per unit drilled
+const MAXA = 106 * Math.PI / 180;             // can't point more than slightly upwards
+const HCOST = 1.35;                           // cracks spread easier up/down than sideways
+const PROD_DUR = 7.5, PROD_MONTHS = 36;
+
+const ROCKS = [
+  {name:'Topsoil',   col:'#b4744a', hard:1.0, frac:6,   note:'soft'},
+  {name:'Sandstone', col:'#d8b47a', hard:1.2, frac:3,   note:'soft'},
+  {name:'Limestone', col:'#a3a7a6', hard:2.3, frac:4,   note:'hard rock'},
+  {name:'Mudstone',  col:'#7d6857', hard:1.4, frac:2.6, note:'medium'},
+  {name:'Oil shale', col:'#626a78', hard:1.6, frac:1,   note:'target layer'},
+  {name:'Granite',   col:'#57465e', hard:4.5, frac:8,   note:'very hard, no oil'},
+];
+
+const LEVELS = [{
+  name:'Permian Basin', where:'West Texas', seed:1729, rigX:40, price:70,
+  rigCost:2.0, drillCost:0.025, chargeCost:0.5, maxCharges:6, fracR:8, oilPerCell:1000,
+  stars:[0, 9, 15],
+  bounds(x){
+    const s = 14;
+    const top = 104 + 7*Math.sin(x*.035+.5) + 2.5*Math.sin(x*.12+2);
+    return [s,
+      s + 7 + 1.5*Math.sin(x*.13),
+      52 + 5*Math.sin(x*.05+1) + 2*Math.sin(x*.17),
+      88 + 6*Math.sin(x*.04+2.2) + 2*Math.sin(x*.15+1),
+      top,
+      top + 15 + 4*Math.sin(x*.06+1.3)];
+  },
+  rich(x){ return 0.2 + 0.75*gauss(x, 92, 15) + 0.35*gauss(x, 13, 8); }
+}];
+
+const FACTS = [
+  'Real wells use small shaped explosive charges, called perforating guns, to punch holes through the steel pipe. Then water and sand are pumped in at high pressure to crack the rock',
+  'Shale is so tight that oil cannot flow through it on its own. Without cracks, the oil stays trapped for millions of years',
+  'A typical U.S. shale well loses 60–70% of its output in the first year. That is why companies have to keep drilling new wells',
+  'The sideways part of a modern shale well is often 3 km long, and some are more than 5 km',
+  'The Permian Basin in Texas and New Mexico produces more oil than most countries in the world',
+  'Shale drilling turned the United States into the world\'s largest oil producer in the 2010s',
+  'The sand pumped into the cracks is called proppant. It props the cracks open so oil can keep flowing',
+  'Drillers can steer a drill bit almost 3 km underground and hit a target layer only a few metres thick',
+];
+
+let LV = null;      // built level
+let G = null;       // game state
+let bgCanvas = null, stimCanvas = null;
+
+function buildLevel(i){
+  const L = LEVELS[i], rng = mulberry32(L.seed), nz = makeNoise(rng, 7, W, H);
+  const bnd = [];
+  for (let x = 0; x <= W; x++){
+    const b = L.bounds(x);
+    for (let k = 1; k < b.length; k++) b[k] = Math.max(b[k], b[k-1] + 3);
+    bnd.push(b);
+  }
+  const bAt = (x, k) => { x = clamp(x, 0, W); const i = Math.min(W-1, Math.floor(x)); return lerp(bnd[i][k], bnd[i+1][k], x - i); };
+  const layer = new Uint8Array(W*H), oil = new Float32Array(W*H);
+  let maxOil = 0, totalOil = 0;
+  for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){
+    const x = i + .5, y = j + .5;
+    let k = 255;
+    if (y >= bAt(x, 0)){ k = 5; for (let q = 1; q <= 5; q++) if (y < bAt(x, q)){ k = q - 1; break; } }
+    layer[j*W+i] = k;
+    if (k === 4){
+      const t = bAt(x, 4), bt = bAt(x, 5), f = (y - t) / (bt - t);
+      const r = clamp(L.rich(x) * (0.62 + 0.38*Math.sin(Math.PI*f)) * (0.7 + 0.6*nz(x, y)), 0.03, 1);
+      oil[j*W+i] = L.oilPerCell * r;
+      maxOil = Math.max(maxOil, oil[j*W+i]); totalOil += oil[j*W+i];
+    }
+  }
+  return {L, bnd, bAt, layer, oil, maxOil, totalOil, nz, rng: mulberry32(L.seed + 99)};
+}
+const cellOf = (x, y) => { const i = Math.floor(x), j = Math.floor(y); return (i < 0 || j < 0 || i >= W || j >= H) ? -1 : j*W + i; };
+const layerAt = (x, y) => { const c = cellOf(x, y); return c < 0 ? (y < 0 ? 255 : 5) : LV.layer[c]; };
+const rockAt = (x, y) => { const k = layerAt(x, y); return k === 255 ? 0 : k; };
+const surfY = () => LV.bAt(0, 0);
+
+// ---------- layout ----------
+const cv = $('c'), ctx = cv.getContext('2d');
+let DPR = 1, CW = 0, CH = 0, S = 1, OX = 0, OY = 0;
+function layout(){
+  DPR = Math.min(window.devicePixelRatio || 1, 2.5);
+  CW = innerWidth; CH = innerHeight;
+  cv.width = Math.round(CW * DPR); cv.height = Math.round(CH * DPR);
+  const topB = $('hud').getBoundingClientRect().bottom + 4;
+  const botT = $('bottom').getBoundingClientRect().top;
+  const availH = Math.max(120, botT - topB);
+  S = Math.min(CW / W, availH / (H - 2));
+  OX = (CW - W*S) / 2;
+  OY = botT - H*S;
+  if (LV){ renderBG(); if (G && G.stim) renderStim(); }
+}
+const toWorld = e => ({x: (e.clientX - OX) / S, y: (e.clientY - OY) / S});
+
+// ---------- background render ----------
+function layerPath(g, k){
+  const top = k => k >= 6 ? null : k;
+  g.beginPath();
+  g.moveTo(0, LV.bAt(0, k));
+  for (let x = 0; x <= W; x += 1) g.lineTo(x, LV.bAt(x, k));
+  if (k + 1 <= 5) for (let x = W; x >= 0; x -= 1) g.lineTo(x, LV.bAt(x, k + 1));
+  else { g.lineTo(W, H); g.lineTo(0, H); }
+  g.closePath();
+}
+function renderBG(){
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(W * S * DPR); c.height = Math.ceil(H * S * DPR);
+  const g = c.getContext('2d');
+  g.setTransform(S*DPR, 0, 0, S*DPR, 0, 0);
+  const rng = mulberry32(LV.L.seed + 7);
+  for (let k = 0; k < 6; k++){
+    g.save();
+    layerPath(g, k); g.fillStyle = ROCKS[k].col; g.fill(); g.clip();
+    const n = 900;
+    if (k === 0){ // topsoil: pebbles
+      for (let q = 0; q < 260; q++){ g.fillStyle = rng() < .5 ? 'rgba(80,40,20,.35)' : 'rgba(255,220,180,.2)'; g.beginPath(); g.arc(rng()*W, 14 + rng()*10, .2 + rng()*.35, 0, 7); g.fill(); }
+    } else if (k === 1){ // sandstone: grains + bedding
+      for (let q = 0; q < n; q++){ g.fillStyle = rng() < .5 ? 'rgba(120,80,30,.25)' : 'rgba(255,245,220,.35)'; g.fillRect(rng()*W, 18 + rng()*48, .25, .25); }
+      g.strokeStyle = 'rgba(120,80,30,.18)'; g.lineWidth = .2;
+      for (let f = .2; f < 1; f += .2){ g.beginPath(); for (let x = 0; x <= W; x += 2){ const y = lerp(LV.bAt(x,1), LV.bAt(x,2), f) + Math.sin(x*.3+f*9)*.5; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+    } else if (k === 2){ // limestone: blocky joints
+      g.strokeStyle = 'rgba(40,40,45,.22)'; g.lineWidth = .22;
+      for (let f = .12; f < 1; f += .14){
+        g.beginPath(); for (let x = 0; x <= W; x += 2){ const y = lerp(LV.bAt(x,2), LV.bAt(x,3), f); x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke();
+        for (let x = rng()*6; x < W; x += 4 + rng()*5){ const y1 = lerp(LV.bAt(x,2), LV.bAt(x,3), f), y2 = lerp(LV.bAt(x,2), LV.bAt(x,3), f + .14); g.beginPath(); g.moveTo(x, y1); g.lineTo(x + .3, y2); g.stroke(); }
+      }
+      for (let q = 0; q < 300; q++){ g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(rng()*W, 50 + rng()*50, .3, .3); }
+    } else if (k === 3){ // mudstone: fine wavy lines
+      g.strokeStyle = 'rgba(30,20,10,.18)'; g.lineWidth = .15;
+      for (let f = .15; f < 1; f += .17){ g.beginPath(); for (let x = 0; x <= W; x += 2){ const y = lerp(LV.bAt(x,3), LV.bAt(x,4), f) + Math.sin(x*.5+f*20)*.3; x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+    } else if (k === 4){ // shale: laminations + oil
+      g.strokeStyle = 'rgba(255,255,255,.07)'; g.lineWidth = .14;
+      for (let f = .06; f < 1; f += .07){ g.beginPath(); for (let x = 0; x <= W; x += 2){ const y = lerp(LV.bAt(x,4), LV.bAt(x,5), f); x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+      for (let j = 0; j < H; j++) for (let i = 0; i < W; i++){
+        const o = LV.oil[j*W+i]; if (!o) continue;
+        const r = o / LV.L.oilPerCell;
+        g.fillStyle = `rgba(22,12,4,${(r*0.62).toFixed(3)})`;
+        g.beginPath(); g.arc(i + .5 + (rng()-.5)*.6, j + .5 + (rng()-.5)*.6, 1.05, 0, 7); g.fill();
+      }
+    } else { // granite: specks
+      for (let q = 0; q < 900; q++){ g.fillStyle = ['rgba(255,200,220,.25)','rgba(0,0,0,.3)','rgba(255,255,255,.2)'][q%3]; g.fillRect(rng()*W, 110 + rng()*60, .35, .35); }
+    }
+    g.restore();
+  }
+  // layer edges
+  g.strokeStyle = 'rgba(0,0,0,.35)'; g.lineWidth = .3;
+  for (let k = 1; k <= 5; k++){ g.beginPath(); for (let x = 0; x <= W; x++){ const y = LV.bAt(x, k); x ? g.lineTo(x, y) : g.moveTo(x, y); } g.stroke(); }
+  // depth shading
+  const dg = g.createLinearGradient(0, surfY(), 0, H);
+  dg.addColorStop(0, 'rgba(0,0,0,0)'); dg.addColorStop(1, 'rgba(10,0,20,.35)');
+  g.fillStyle = dg; g.fillRect(0, surfY(), W, H);
+  // ground surface strip
+  g.fillStyle = '#c99260'; g.fillRect(0, surfY(), W, .7);
+  bgCanvas = c;
+}
+
+function renderStim(){
+  const c = document.createElement('canvas');
+  c.width = Math.ceil(W * S * DPR); c.height = Math.ceil(H * S * DPR);
+  const g = c.getContext('2d');
+  g.setTransform(S*DPR, 0, 0, S*DPR, 0, 0);
+  const R = LV.L.fracR;
+  for (const q of G.stimCells){
+    const i = q % W, j = (q / W) | 0, f = G.best[q] / R;
+    const sh = LV.layer[q] === 4;
+    g.fillStyle = sh ? `rgba(255,178,70,${(0.12 + 0.28*(1-f)).toFixed(3)})` : `rgba(255,178,70,${(0.06 + 0.1*(1-f)).toFixed(3)})`;
+    g.fillRect(i, j, 1.02, 1.02);
+  }
+  stimCanvas = c;
+}
+
+// ---------- game flow ----------
+function startLevel(i){
+  LV = buildLevel(i);
+  const L = LV.L, y0 = surfY();
+  G = {
+    li: i, phase: 'drill', t: 0,
+    path: [{x: L.rigX, y: y0}], bit: {x: L.rigX, y: y0}, theta: 0,
+    holding: false, target: null, blocked: false,
+    len: 0, lat: 0, sinceLast: 0, drillCost: 0,
+    everShale: false, shaleLen: 0, afterShaleLen: 0, leftShale: false,
+    charges: [], cracks: [], stim: false, stimCells: [], best: null, owner: null,
+    booms: [], shake: 0, frackT: 0, frackEnd: 0,
+    prodT: 0, oilParts: [], spawnAcc: 0, eur: 0, overlap: 0,
+    parts: [], tipFlash: null, tipFlashT: 0,
+  };
+  stimCanvas = null;
+  renderBG();
+  $('act').classList.remove('hide');
+  $('result').classList.add('hidden');
+  $('title').classList.add('hidden');
+  $('lvl').innerHTML = `${L.name}<small>Level ${i+1} · ${L.where}</small>`;
+  refreshUI(true);
+}
+
+function spent(){ const L = LV.L; return L.rigCost + G.drillCost + G.charges.length * L.chargeCost; }
+
+function flashTip(msg, cls){ G.tipFlash = msg; G.tipFlashT = 2.6; G.tipFlashCls = cls || 'warn'; }
+
+// --- drilling ---
+function drillUpdate(dt){
+  if (!G.holding || !G.target) return;
+  const L = LV.L;
+  let dist = 26 / ROCKS[rockAt(G.bit.x, G.bit.y)].hard * dt;
+  G.blocked = false;
+  while (dist > 0){
+    const st = Math.min(0.25, dist); dist -= st;
+    const dx = G.target.x - G.bit.x, dy = G.target.y - G.bit.y;
+    if (dx*dx + dy*dy > 4){
+      const want = Math.atan2(dx, dy);
+      let d = want - G.theta;
+      while (d > Math.PI) d -= 2*Math.PI; while (d < -Math.PI) d += 2*Math.PI;
+      G.theta = clamp(G.theta + clamp(d, -TURN*st, TURN*st), -MAXA, MAXA);
+    }
+    const nx = G.bit.x + Math.sin(G.theta)*st, ny = G.bit.y + Math.cos(G.theta)*st;
+    if (nx < 1.5 || nx > W - 1.5 || ny > H - 1.5 || (ny < surfY() + 3 && ny < G.bit.y)){ G.blocked = true; break; }
+    const k = rockAt(nx, ny), r = ROCKS[k];
+    G.drillCost += st * r.hard * L.drillCost;
+    G.len += st;
+    if (Math.abs(G.theta) > 1.1) G.lat += st;
+    if (k === 4){ G.everShale = true; G.shaleLen += st; }
+    if (G.everShale){ G.afterShaleLen += st; if (k !== 4) G.leftShale = true; }
+    G.bit.x = nx; G.bit.y = ny; G.sinceLast += st;
+    if (G.sinceLast >= 0.6){ G.path.push({x: nx, y: ny}); G.sinceLast = 0; }
+  }
+  // rock chips
+  if (Math.random() < 0.6){
+    const k = rockAt(G.bit.x, G.bit.y);
+    G.parts.push({x: G.bit.x, y: G.bit.y, vx: (Math.random()-.5)*8, vy: (Math.random()-.5)*8, life: .45, max: .45, col: ROCKS[k].col, r: .25 + Math.random()*.3});
+  }
+}
+function finishDrilling(){
+  const last = G.path[G.path.length - 1];
+  if (Math.hypot(last.x - G.bit.x, last.y - G.bit.y) > .05) G.path.push({x: G.bit.x, y: G.bit.y});
+  G.holding = false;
+  G.phase = 'charges';
+  refreshUI(true);
+}
+
+// --- charges ---
+function placeCharge(w){
+  const L = LV.L;
+  for (let i = 0; i < G.charges.length; i++){
+    const c = G.charges[i];
+    if (Math.hypot(c.x - w.x, c.y - w.y) < 3){ G.charges.splice(i, 1); refreshUI(true); return; }
+  }
+  let bi = -1, bd = 1e9;
+  for (let i = 0; i < G.path.length; i++){
+    const p = G.path[i];
+    if (p.y < LV.bAt(p.x, 1)) continue;
+    const d = (p.x - w.x)**2 + (p.y - w.y)**2;
+    if (d < bd){ bd = d; bi = i; }
+  }
+  if (bi < 0 || bd > 36) return;
+  if (G.charges.length >= L.maxCharges){ flashTip('All charges used. Tap a charge to remove it'); return; }
+  const p = G.path[bi];
+  G.charges.push({i: bi, x: p.x, y: p.y, boomed: false});
+  if (navigator.vibrate) navigator.vibrate(10);
+  refreshUI(true);
+}
+
+// --- frack ---
+function regionFrom(cx, cy, R){
+  const ci = Math.floor(cx), cj = Math.floor(cy), r = Math.ceil(R) + 1, n = 2*r + 1;
+  const dist = new Float32Array(n*n).fill(Infinity), done = new Uint8Array(n*n);
+  dist[r*n + r] = 0;
+  for (;;){
+    let bi = -1, bv = Infinity;
+    for (let q = 0; q < n*n; q++) if (!done[q] && dist[q] < bv){ bv = dist[q]; bi = q; }
+    if (bi < 0 || bv > R) break;
+    done[bi] = 1;
+    const qi = bi % n, qj = (bi / n) | 0;
+    for (let dj = -1; dj <= 1; dj++) for (let di = -1; di <= 1; di++){
+      if (!di && !dj) continue;
+      const ni = qi + di, nj = qj + dj;
+      if (ni < 0 || nj < 0 || ni >= n || nj >= n) continue;
+      const wi = ni - r + ci, wj = nj - r + cj;
+      const cell = cellOf(wi + .5, wj + .5);
+      if (cell < 0 || LV.layer[cell] === 255) continue;
+      const nd = bv + ROCKS[LV.layer[cell]].frac * Math.hypot(di*HCOST, dj);
+      const q2 = nj*n + ni;
+      if (nd < dist[q2]) dist[q2] = nd;
+    }
+  }
+  return {ci, cj, r, n, dist, at(x, y){ const i = Math.floor(x) - ci + r, j = Math.floor(y) - cj + r; return (i < 0 || j < 0 || i >= n || j >= n) ? Infinity : dist[j*n + i]; }};
+}
+function genCracks(c, reg, R, rng, out){
+  const branch = (x, y, a, depth) => {
+    for (let s = 0; s < 80; s++){
+      const nx = x + Math.sin(a)*.6, ny = y + Math.cos(a)*.6, dd = reg.at(nx, ny);
+      if (dd > R) break;
+      out.push({c, x1: x, y1: y, x2: nx, y2: ny, d: dd, w: depth ? .16 : .28});
+      x = nx; y = ny; a += (rng() - .5)*.55;
+      if (depth < 3 && rng() < .12) branch(x, y, a + (rng() < .5 ? -1 : 1)*(.5 + rng()*.7), depth + 1);
+    }
+  };
+  for (const a of [0, Math.PI, .5, Math.PI - .5, -.5, Math.PI + .5, 1.35, -1.35]) branch(c.x, c.y, a + (rng() - .5)*.3, 0);
+}
+function computeFrack(){
+  const L = LV.L, R = L.fracR, N = W*H, rng = mulberry32(L.seed + G.charges.length*31 + 5);
+  const best = new Float32Array(N).fill(Infinity), owner = new Int16Array(N).fill(-1), hits = new Uint8Array(N);
+  G.charges.sort((a, b) => b.i - a.i);               // toe first, like real stages
+  G.cracks = [];
+  G.charges.forEach((c, ci) => {
+    const reg = regionFrom(c.x, c.y, R);
+    for (let j = 0; j < reg.n; j++) for (let i = 0; i < reg.n; i++){
+      const d = reg.dist[j*reg.n + i]; if (d > R) continue;
+      const cell = cellOf(i - reg.r + reg.ci + .5, j - reg.r + reg.cj + .5); if (cell < 0) continue;
+      hits[cell]++;
+      if (d < best[cell]){ best[cell] = d; owner[cell] = ci; }
+    }
+    c.boomT = .5 + ci*.38; c.boomed = false;
+    genCracks(c, reg, R, rng, G.cracks);
+  });
+  let eur = 0, hitSum = 0, uniq = 0, shaleCells = 0;
+  const cells = [];
+  for (let q = 0; q < N; q++) if (best[q] <= R){
+    cells.push(q); eur += LV.oil[q]; hitSum += hits[q]; uniq++;
+    if (LV.layer[q] === 4) shaleCells++;
+  }
+  G.best = best; G.owner = owner; G.stimCells = cells; G.stim = true;
+  G.oilCells = cells.filter(q => LV.oil[q] > 0);
+  G.eur = eur;
+  G.overlap = hitSum ? (hitSum - uniq) / hitSum : 0;
+  G.frackEnd = (G.charges.length ? G.charges[G.charges.length - 1].boomT : 0) + 1.6;
+  renderStim();
+}
+function startFrack(){
+  if (!G.charges.length) return;
+  computeFrack();
+  G.phase = 'frack'; G.frackT = 0;
+  refreshUI(true);
+}
+function frackUpdate(dt){
+  G.frackT += dt;
+  for (const c of G.charges){
+    if (!c.boomed && G.frackT >= c.boomT){
+      c.boomed = true;
+      G.booms.push({x: c.x, y: c.y, t: 0});
+      G.shake = Math.min(1.2, G.shake + .7);
+      if (navigator.vibrate) navigator.vibrate(35);
+      for (let q = 0; q < 18; q++){ const a = Math.random()*7, s = 6 + Math.random()*14; G.parts.push({x: c.x, y: c.y, vx: Math.sin(a)*s, vy: Math.cos(a)*s, life: .5, max: .5, col: q % 2 ? '#ffd36b' : '#ff7a3a', r: .3 + Math.random()*.3}); }
+    }
+  }
+  if (G.frackT >= G.frackEnd){ G.phase = 'produce'; G.prodT = 0; refreshUI(true); }
+}
+
+// --- production ---
+const cumFrac = m => (1 - Math.exp(-m / 9)) / (1 - Math.exp(-PROD_MONTHS / 9));
+function produceUpdate(dt){
+  G.prodT += dt;
+  const m = Math.min(PROD_MONTHS, G.prodT / PROD_DUR * PROD_MONTHS);
+  const rate = Math.exp(-m / 9);
+  G.spawnAcc += dt * 70 * rate;
+  while (G.spawnAcc > 1 && G.oilCells.length && G.oilParts.length < 260){
+    G.spawnAcc -= 1;
+    let q = 0;
+    for (let tries = 0; tries < 8; tries++){ q = G.oilCells[(Math.random()*G.oilCells.length) | 0]; if (Math.random() < LV.oil[q] / LV.maxOil) break; }
+    const c = G.charges[G.owner[q]];
+    G.oilParts.push({x: q % W + Math.random(), y: ((q / W) | 0) + Math.random(), c, stage: 0, idx: c.i});
+  }
+  if (!G.oilCells.length) G.spawnAcc = 0;
+  for (const p of G.oilParts){
+    if (p.stage === 0){
+      const dx = p.c.x - p.x, dy = p.c.y - p.y, d = Math.hypot(dx, dy), sp = 16*dt;
+      if (d <= sp){ p.stage = 1; } else { p.x += dx/d*sp; p.y += dy/d*sp; }
+    } else {
+      p.idx -= 130*dt;
+      if (p.idx <= 0){ p.dead = true; continue; }
+      const a = G.path[Math.floor(p.idx)], b = G.path[Math.min(G.path.length - 1, Math.floor(p.idx) + 1)], f = p.idx % 1;
+      p.x = lerp(a.x, b.x, f); p.y = lerp(a.y, b.y, f);
+    }
+  }
+  G.oilParts = G.oilParts.filter(p => !p.dead);
+  if (G.prodT >= PROD_DUR + 1.0) showResult();
+}
+
+// --- result ---
+function showResult(){
+  const L = LV.L;
+  G.phase = 'result';
+  const rev = G.eur * L.price / 1e6, chg = G.charges.length * L.chargeCost;
+  const profit = rev - L.rigCost - G.drillCost - chg;
+  const stars = L.stars.filter(s => profit >= s).length;
+  const bestKey = 'best.' + G.li, prev = store.get(bestKey);
+  const isBest = !prev || profit > prev.profit;
+  if (isBest) store.set(bestKey, {profit, stars});
+  $('rName').textContent = L.name;
+  $('rStars').innerHTML = [0,1,2].map(i => `<span class="${i < stars ? '' : 'off'}">★</span>`).join('');
+  $('rProfit').textContent = fmtM(profit);
+  $('rProfit').className = 'profit ' + (profit >= 0 ? 'pos' : 'neg');
+  const row = (a, b, neg) => `<tr class="${neg ? 'neg' : ''}"><td>${a}</td><td>${b}</td></tr>`;
+  $('rTable').innerHTML =
+    row(`Oil pumped in 3 years`, `${fmtN(G.eur)} bbl`) +
+    row(`Oil sold at $${L.price}/barrel`, fmtM(rev)) +
+    row(`Rig and site`, '−' + fmtM(L.rigCost), 1) +
+    row(`Drilling (${fmtN(G.len*UNIT_M)} m)`, '−' + fmtM(G.drillCost), 1) +
+    row(`Charges (${G.charges.length})`, '−' + fmtM(chg), 1) +
+    (prev && !isBest ? row('Your best', fmtM(prev.profit)) : '');
+  $('rThresh').innerHTML = `<span>★ any profit</span><span>★★ ${fmtM(L.stars[1])}+</span><span>★★★ ${fmtM(L.stars[2])}+</span>`;
+  $('rTip').textContent = adviceFor(profit, stars);
+  $('rFact').textContent = FACTS[(Math.random()*FACTS.length) | 0];
+  $('act').classList.add('hide');
+  $('rock').style.display = 'none';
+  setTimeout(() => $('result').classList.remove('hidden'), 150);
+  refreshUI(true);
+}
+function adviceFor(profit, stars){
+  const L = LV.L;
+  const inShale = G.afterShaleLen ? G.shaleLen / G.afterShaleLen : 0;
+  const chInShale = G.charges.filter(c => layerAt(c.x, c.y) === 4).length;
+  if (!G.everShale) return 'Your well never reached the oil shale, the grey layer with dark oil spots. Aim deeper';
+  if (chInShale < G.charges.length) return 'Some charges were outside the shale. Cracks barely spread in other rock, and there is no oil there';
+  if (inShale < .7) return `Only ${Math.round(inShale*100)}% of your well stayed inside the shale. Start curving earlier and follow the layer`;
+  if (G.overlap > .25) return 'Your charges were too close together, so their cracks overlapped. Spread them out along the well';
+  if (G.charges.length < L.maxCharges) return `You used ${G.charges.length} of ${L.maxCharges} charges. More charges along a longer well crack more rock`;
+  if (G.lat * UNIT_M < 1200) return 'Your sideways section was short. A longer horizontal well reaches more oil';
+  if (stars < 3) return 'The darkest patches hold the most oil. Steer your horizontal well through the richest part of the shale';
+  return 'Excellent well! Try to beat your best profit';
+}
+
+// ---------- UI ----------
+let lastTip = '', lastMoney = '';
+function setTip(html, cls){
+  const key = html + '|' + (cls || '');
+  if (key === lastTip) return;
+  lastTip = key;
+  $('tip').innerHTML = '<span>' + html + '</span>';
+  $('tip').className = cls || '';
+}
+function refreshUI(force){
+  if (!G) return;
+  const L = LV.L, act = $('act');
+  if (force){ lastTip = ''; lastMoney = ''; }
+  let money;
+  if (G.phase === 'produce' || G.phase === 'result'){
+    const m = Math.min(PROD_MONTHS, G.prodT / PROD_DUR * PROD_MONTHS);
+    const rev = G.eur * cumFrac(m) * L.price / 1e6;
+    const p = rev - spent();
+    money = `<span class="lbl">Profit</span><span style="color:${p >= 0 ? 'var(--good)' : 'var(--bad)'}">${fmtM(p)}</span>`;
+  } else money = `<span class="lbl">Spent</span>${fmtM(spent())}`;
+  if (money !== lastMoney){ $('money').innerHTML = money; lastMoney = money; }
+
+  if (G.tipFlashT > 0){ setTip(G.tipFlash, G.tipFlashCls); }
+  else if (G.phase === 'drill'){
+    const k = rockAt(G.bit.x, G.bit.y);
+    if (G.blocked) setTip('You hit the edge of your land. Steer another way, or tap <b>Done drilling</b>', 'warn');
+    else if (G.len < 1) setTip('Hold your finger where the drill should go. It turns slowly, so start curving early to reach the <b>oil shale</b>');
+    else if (k === 4) setTip('You\'re in the <b>oil shale</b>! Turn sideways and stay inside it through the darkest oil', 'good');
+    else if (G.everShale && G.leftShale) setTip('You left the shale. Steer back in, or tap <b>Done drilling</b>', 'warn');
+    else if (k === 5) setTip('Granite is very hard and holds no oil. Steer up into the shale', 'warn');
+    else setTip('Keep going. The <b>oil shale</b> is the grey layer with dark oil spots');
+    act.textContent = 'Done drilling';
+    act.disabled = G.len < 20;
+  } else if (G.phase === 'charges'){
+    setTip(`Tap along the well to place charges (<b>${G.charges.length}/${L.maxCharges}</b>). Each one cracks the rock around it. Tap a charge to remove it`);
+    act.textContent = 'Frack! 💥';
+    act.disabled = !G.charges.length;
+  } else if (G.phase === 'frack'){
+    setTip('💥 Fracking… cracks are spreading through the rock');
+    act.classList.add('hide');
+  } else if (G.phase === 'produce'){
+    const m = Math.min(PROD_MONTHS, Math.floor(G.prodT / PROD_DUR * PROD_MONTHS));
+    setTip(`Pumping… <b>month ${m}</b> · ${fmtN(G.eur * cumFrac(m))} barrels`);
+    act.classList.add('hide');
+  }
+  const rock = $('rock');
+  if (G.phase === 'drill'){
+    const k = rockAt(G.bit.x, G.bit.y), r = ROCKS[k];
+    rock.style.display = 'block';
+    rock.innerHTML = `<b><i style="background:${r.col}"></i>${r.name}</b> · ${r.note}<br>Depth ${fmtN((G.bit.y - surfY())*UNIT_M)} m · Sideways ${fmtN(G.lat*UNIT_M)} m`;
+  } else rock.style.display = 'none';
+}
+
+// ---------- drawing ----------
+function draw(t){
+  ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+  const sy = OY + surfY()*S;
+  // sky
+  const sg = ctx.createLinearGradient(0, 0, 0, sy);
+  sg.addColorStop(0, '#2f5d96'); sg.addColorStop(.65, '#8fb6d4'); sg.addColorStop(1, '#f2cf9c');
+  ctx.fillStyle = sg; ctx.fillRect(0, 0, CW, sy + 1);
+  ctx.fillStyle = '#231c29'; ctx.fillRect(0, sy, CW, CH - sy);
+  // sun
+  ctx.fillStyle = 'rgba(255,240,200,.9)';
+  ctx.beginPath(); ctx.arc(CW*.82, Math.max(30, sy - S*30), Math.max(12, S*4), 0, 7); ctx.fill();
+  // mesas
+  const mesa = (col, amp, seed, base) => {
+    ctx.fillStyle = col; ctx.beginPath(); ctx.moveTo(0, sy);
+    for (let x = 0; x <= CW + 8; x += 6){
+      const v = Math.sin(x/CW*7 + seed) + .6*Math.sin(x/CW*19 + seed*2);
+      const h = (v > .55 ? amp : v > 0 ? amp*.45 : base) * S;
+      ctx.lineTo(x, sy - h);
+    }
+    ctx.lineTo(CW, sy); ctx.closePath(); ctx.fill();
+  };
+  mesa('rgba(196,126,96,.55)', 6, 1.3, .8);
+  mesa('#c98a5e', 3.6, 4.1, .4);
+
+  // world
+  const sh = G ? G.shake : 0;
+  const shx = (Math.random() - .5)*sh*S*1.5, shy = (Math.random() - .5)*sh*S*1.5;
+  ctx.setTransform(DPR*S, 0, 0, DPR*S, DPR*(OX + shx), DPR*(OY + shy));
+  if (bgCanvas) ctx.drawImage(bgCanvas, 0, 0, W, H);
+
+  // labels + depth scale
+  ctx.textBaseline = 'middle';
+  ctx.font = '600 2.6px system-ui, sans-serif';
+  for (let k = 0; k < 6; k++){
+    const x = 2, y = k < 5 ? (LV.bAt(x, k) + LV.bAt(x, k + 1)) / 2 : (LV.bAt(x, 5) + H) / 2;
+    if (k === 0) continue;
+    ctx.fillStyle = k === 4 ? 'rgba(255,200,110,.95)' : 'rgba(255,255,255,.6)';
+    ctx.textAlign = 'left';
+    ctx.fillText(ROCKS[k].name.toUpperCase(), x, y);
+  }
+  ctx.font = '500 2.2px system-ui, sans-serif'; ctx.textAlign = 'right';
+  for (let d = 20; surfY() + d < H - 2; d += 20){
+    const y = surfY() + d;
+    ctx.fillStyle = 'rgba(255,255,255,.45)'; ctx.fillRect(W - 1.6, y - .08, 1.2, .16);
+    ctx.fillText(`${(d*UNIT_M/1000).toFixed(1)} km`, W - 2.2, y);
+  }
+
+  if (G){
+    // fracked zone
+    if (stimCanvas && (G.phase === 'produce' || G.phase === 'result' || G.phase === 'frack')){
+      let a = 1;
+      if (G.phase === 'frack') a = clamp((G.frackT - .5) / (G.frackEnd - .5), 0, 1);
+      else a = 1 - .55*clamp(G.prodT / PROD_DUR, 0, 1);
+      ctx.globalAlpha = a; ctx.drawImage(stimCanvas, 0, 0, W, H); ctx.globalAlpha = 1;
+    }
+    // cracks
+    if (G.cracks.length){
+      const R = LV.L.fracR;
+      ctx.lineCap = 'round';
+      for (const s of G.cracks){
+        let reach = R;
+        if (G.phase === 'frack'){ const p = clamp((G.frackT - s.c.boomT) / 1.0, 0, 1); reach = R * (1 - (1 - p)**2); }
+        if (s.d > reach) continue;
+        const fresh = G.phase === 'frack' ? clamp(1 - (G.frackT - s.c.boomT - s.d/R) / .8, 0, 1) : 0;
+        ctx.strokeStyle = fresh > 0 ? `rgba(255,${200 + 55*fresh | 0},${120 + 120*fresh | 0},1)` : 'rgba(255,214,130,.85)';
+        ctx.lineWidth = s.w;
+        ctx.beginPath(); ctx.moveTo(s.x1, s.y1); ctx.lineTo(s.x2, s.y2); ctx.stroke();
+      }
+    }
+    // well
+    ctx.lineCap = 'round'; ctx.lineJoin = 'round';
+    const pathLine = () => { ctx.beginPath(); ctx.moveTo(G.path[0].x, G.path[0].y); for (let i = 1; i < G.path.length; i++) ctx.lineTo(G.path[i].x, G.path[i].y); if (G.phase === 'drill') ctx.lineTo(G.bit.x, G.bit.y); };
+    pathLine(); ctx.strokeStyle = 'rgba(15,12,18,.8)'; ctx.lineWidth = 1.5; ctx.stroke();
+    pathLine(); ctx.strokeStyle = '#cfd6db'; ctx.lineWidth = .8; ctx.stroke();
+    // oil inside the pipe while producing
+    if (G.phase === 'produce' || G.phase === 'result'){ pathLine(); ctx.strokeStyle = 'rgba(40,25,10,.85)'; ctx.lineWidth = .45; ctx.stroke(); }
+
+    // aim line + start hint
+    if (G.phase === 'drill'){
+      if (G.holding && G.target){
+        ctx.setLineDash([.8, .8]); ctx.strokeStyle = 'rgba(255,255,255,.55)'; ctx.lineWidth = .25;
+        ctx.beginPath(); ctx.moveTo(G.bit.x, G.bit.y); ctx.lineTo(G.target.x, G.target.y); ctx.stroke(); ctx.setLineDash([]);
+        ctx.strokeStyle = 'rgba(255,255,255,.8)'; ctx.lineWidth = .3;
+        ctx.beginPath(); ctx.arc(G.target.x, G.target.y, 2.2, 0, 7); ctx.stroke();
+      } else if (G.len < 1){
+        const p = (t % 1.4) / 1.4, hx = G.bit.x, hy = G.bit.y + 22;
+        ctx.strokeStyle = `rgba(255,255,255,${1 - p})`; ctx.lineWidth = .4;
+        ctx.beginPath(); ctx.arc(hx, hy, 1.5 + p*4, 0, 7); ctx.stroke();
+        ctx.fillStyle = 'rgba(255,255,255,.9)'; ctx.beginPath(); ctx.arc(hx, hy, 1.2, 0, 7); ctx.fill();
+        ctx.font = '700 2.6px system-ui, sans-serif'; ctx.textAlign = 'center';
+        ctx.fillText('HOLD HERE', hx, hy + 6);
+      }
+    }
+    // charges
+    if (G.phase === 'charges' && G.charges.length < LV.L.maxCharges && G.charges.length === 0){
+      const k = Math.floor(G.path.length * .8), p = G.path[k];
+      if (p){ const a = .5 + .5*Math.sin(t*5); ctx.strokeStyle = `rgba(255,255,255,${a})`; ctx.lineWidth = .35; ctx.beginPath(); ctx.arc(p.x, p.y, 2.5, 0, 7); ctx.stroke(); }
+    }
+    for (const c of G.charges){
+      if (c.boomed){ ctx.fillStyle = 'rgba(20,10,5,.9)'; ctx.beginPath(); ctx.arc(c.x, c.y, .8, 0, 7); ctx.fill(); continue; }
+      const pulse = G.phase === 'charges' ? .1*Math.sin(t*6) : 0;
+      ctx.fillStyle = '#e5402b'; ctx.strokeStyle = '#fff'; ctx.lineWidth = .25;
+      ctx.beginPath(); ctx.arc(c.x, c.y, 1.05 + pulse, 0, 7); ctx.fill(); ctx.stroke();
+      ctx.fillStyle = '#fff'; ctx.font = '800 1.3px system-ui'; ctx.textAlign = 'center'; ctx.fillText('TNT', c.x, c.y + .05);
+    }
+    // bit
+    if (G.phase === 'drill' && G.len > 0){
+      ctx.save(); ctx.translate(G.bit.x, G.bit.y); ctx.rotate(-G.theta);
+      ctx.fillStyle = '#ffc93a'; ctx.strokeStyle = '#3a2a0a'; ctx.lineWidth = .2;
+      ctx.beginPath(); ctx.moveTo(-.9, -.6); ctx.lineTo(.9, -.6); ctx.lineTo(0, 1.4); ctx.closePath(); ctx.fill(); ctx.stroke();
+      if (G.holding){ ctx.rotate(t*20); ctx.strokeStyle = 'rgba(255,255,255,.7)'; ctx.beginPath(); ctx.moveTo(-.7, 0); ctx.lineTo(.7, 0); ctx.stroke(); }
+      ctx.restore();
+    }
+    // particles
+    for (const p of G.parts){ ctx.globalAlpha = clamp(p.life / p.max, 0, 1); ctx.fillStyle = p.col; ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, 7); ctx.fill(); }
+    ctx.globalAlpha = 1;
+    for (const p of G.oilParts){
+      ctx.fillStyle = '#ffb02e'; ctx.beginPath(); ctx.arc(p.x, p.y, .42, 0, 7); ctx.fill();
+    }
+    // booms
+    for (const b of G.booms){
+      const p = b.t / .6; if (p >= 1) continue;
+      ctx.fillStyle = `rgba(255,230,150,${.8*(1 - p)})`;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 1 + p*7, 0, 7); ctx.fill();
+      ctx.strokeStyle = `rgba(255,140,60,${1 - p})`; ctx.lineWidth = .5;
+      ctx.beginPath(); ctx.arc(b.x, b.y, 2 + p*11, 0, 7); ctx.stroke();
+    }
+  }
+  // surface equipment
+  const rx = LV.L.rigX, y0 = surfY();
+  const producing = G && (G.phase === 'produce' || G.phase === 'result');
+  if (producing) drawPumpjack(rx, y0, t); else drawDerrick(rx, y0, t);
+  const fill = G && producing ? cumFrac(Math.min(PROD_MONTHS, G.prodT / PROD_DUR * PROD_MONTHS)) : 0;
+  drawTank(rx + 9, y0, fill);
+}
+function drawDerrick(x, y, t){
+  ctx.strokeStyle = '#efe9dc'; ctx.lineWidth = .3; ctx.lineCap = 'round';
+  const h = 11.5, b = 2.6, top = .5;
+  ctx.beginPath();
+  ctx.moveTo(x - b, y); ctx.lineTo(x - top, y - h); ctx.moveTo(x + b, y); ctx.lineTo(x + top, y - h);
+  for (let i = 1; i < 6; i++){
+    const f0 = (i - 1)/6, f1 = i/6;
+    const w0 = lerp(b, top, f0), w1 = lerp(b, top, f1);
+    ctx.moveTo(x - w0, y - h*f0); ctx.lineTo(x + w1, y - h*f1);
+    ctx.moveTo(x + w0, y - h*f0); ctx.lineTo(x - w1, y - h*f1);
+    ctx.moveTo(x - w1, y - h*f1); ctx.lineTo(x + w1, y - h*f1);
+  }
+  ctx.stroke();
+  ctx.fillStyle = '#efe9dc'; ctx.fillRect(x - 1, y - h - .8, 2, .8);
+  ctx.fillStyle = '#6b4f37'; ctx.fillRect(x - 3.4, y - 1.1, 6.8, 1.1);
+  ctx.fillStyle = '#d24f2a'; ctx.fillRect(x - 7.5, y - 2.6, 3.4, 2.6);
+  ctx.fillStyle = 'rgba(255,255,255,.7)'; ctx.fillRect(x - 6.8, y - 2, 1, .8);
+  if (G && G.phase === 'drill' && G.holding){
+    ctx.fillStyle = 'rgba(200,200,200,.4)';
+    ctx.beginPath(); ctx.arc(x - 6 + Math.sin(t*3)*.3, y - 3.4 - (t*4 % 3), .8, 0, 7); ctx.fill();
+  }
+}
+function drawPumpjack(x, y, t){
+  const a = .28*Math.sin(t*2.4), px = x - 3.8, py = y - 5;
+  ctx.lineCap = 'round';
+  ctx.strokeStyle = '#3d3a40'; ctx.lineWidth = .45;
+  ctx.beginPath(); ctx.moveTo(px - 1.6, y); ctx.lineTo(px, py); ctx.lineTo(px + 1.6, y); ctx.stroke();
+  ctx.fillStyle = '#3d3a40'; ctx.fillRect(px - 7, y - .6, 9.5, .6);
+  const dx = Math.cos(a), dy = Math.sin(a);
+  const hx = px + dx*3.8, hy = py + dy*3.8, tx = px - dx*4, ty = py - dy*4;
+  ctx.strokeStyle = '#d24f2a'; ctx.lineWidth = .8;
+  ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(hx, hy); ctx.stroke();
+  ctx.fillStyle = '#d24f2a';
+  ctx.beginPath(); ctx.arc(hx, hy + .2, 1.2, -Math.PI/2 + a, Math.PI/2 + a); ctx.fill();
+  ctx.strokeStyle = '#efe9dc'; ctx.lineWidth = .15;
+  ctx.beginPath(); ctx.moveTo(x, hy + 1.2); ctx.lineTo(x, y - .4); ctx.stroke();
+  ctx.fillStyle = '#3d3a40'; ctx.beginPath(); ctx.arc(tx, ty + 1.3, 1.1, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#3d3a40'; ctx.lineWidth = .3; ctx.beginPath(); ctx.moveTo(tx, ty); ctx.lineTo(tx, ty + 1.3); ctx.stroke();
+  ctx.fillStyle = '#5c5a60'; ctx.fillRect(px - 6.5, y - 2, 2, 1.4);
+  ctx.fillStyle = '#7d7a80'; ctx.fillRect(x - .5, y - .9, 1, .9);
+}
+function drawTank(x, y, fill){
+  const w = 4.6, h = 6;
+  ctx.fillStyle = '#d9dde0'; ctx.fillRect(x, y - h, w, h);
+  ctx.fillStyle = '#1e140b'; ctx.fillRect(x + .35, y - .35 - (h - .7)*fill, w - .7, (h - .7)*fill);
+  ctx.strokeStyle = 'rgba(0,0,0,.35)'; ctx.lineWidth = .2; ctx.strokeRect(x, y - h, w, h);
+  ctx.fillStyle = '#c4c9cd'; ctx.beginPath(); ctx.ellipse(x + w/2, y - h, w/2, .5, 0, 0, 7); ctx.fill();
+  ctx.strokeStyle = '#9aa0a5'; ctx.lineWidth = .25;
+  ctx.beginPath(); ctx.moveTo(LV.L.rigX + .5, y - .6); ctx.lineTo(x, y - .6); ctx.stroke();
+}
+
+// ---------- loop ----------
+let last = performance.now(), uiAcc = 0;
+function update(dt){
+  G.t += dt;
+  if (G.phase === 'drill') drillUpdate(dt);
+  else if (G.phase === 'frack') frackUpdate(dt);
+  else if (G.phase === 'produce') produceUpdate(dt);
+  for (const p of G.parts){ p.x += p.vx*dt; p.y += p.vy*dt; p.vx *= .92; p.vy *= .92; p.life -= dt; }
+  G.parts = G.parts.filter(p => p.life > 0);
+  for (const b of G.booms) b.t += dt;
+  G.booms = G.booms.filter(b => b.t < .6);
+  G.shake = Math.max(0, G.shake - dt*2.5);
+  if (G.tipFlashT > 0){ G.tipFlashT -= dt; if (G.tipFlashT <= 0) lastTip = ''; }
+  uiAcc += dt;
+  if (uiAcc > .08){ uiAcc = 0; refreshUI(); }
+}
+function loop(now){
+  const dt = Math.min(.05, (now - last) / 1000); last = now;
+  if (G && G.phase !== 'result') update(dt);
+  else if (G){ G.t += dt; }
+  if (LV) draw(now / 1000);
+  requestAnimationFrame(loop);
+}
+
+// ---------- input ----------
+cv.addEventListener('pointerdown', e => {
+  if (!G) return;
+  e.preventDefault();
+  const w = toWorld(e);
+  if (G.phase === 'drill'){
+    G.holding = true; G.target = w;
+    try { cv.setPointerCapture(e.pointerId); } catch(_){}
+  } else if (G.phase === 'charges') placeCharge(w);
+});
+cv.addEventListener('pointermove', e => { if (G && G.holding) G.target = toWorld(e); });
+const release = () => { if (G) G.holding = false; };
+cv.addEventListener('pointerup', release);
+cv.addEventListener('pointercancel', release);
+cv.addEventListener('contextmenu', e => e.preventDefault());
+
+$('act').addEventListener('click', () => {
+  if (!G) return;
+  if (G.phase === 'drill' && G.len >= 20) finishDrilling();
+  else if (G.phase === 'charges') startFrack();
+});
+$('restart').addEventListener('click', () => { if (G) startLevel(G.li); });
+$('play').addEventListener('click', () => startLevel(0));
+$('again').addEventListener('click', () => startLevel(G.li));
+$('toTitle').addEventListener('click', showTitle);
+addEventListener('resize', layout);
+
+function showTitle(){
+  G = null;
+  LV = LV || buildLevel(0);
+  $('result').classList.add('hidden');
+  $('title').classList.remove('hidden');
+  $('act').classList.add('hide');
+  $('rock').style.display = 'none';
+  $('lvl').innerHTML = '';
+  $('money').innerHTML = '<span class="lbl">Oil</span>$' + LEVELS[0].price + '/bbl';
+  $('tip').innerHTML = '<span>' + 'Find the oil, drill sideways into it, then blast the rock open' + '</span>';
+  const b = store.get('best.0');
+  $('titleBest').textContent = b ? `Best: ${fmtM(b.profit)} · ${'★'.repeat(b.stars)}${'☆'.repeat(3 - b.stars)}` : '';
+}
+
+// ---------- test hook (open index.html#test) ----------
+function autotest(dir, nCharges){
+  startLevel(0);
+  G.holding = true;
+  for (let s = 0; s < 6000; s++){
+    const b = G.bit, ax = clamp(b.x + dir*12, 2, W - 2);
+    const mid = (LV.bAt(ax, 4) + LV.bAt(ax, 5)) / 2;
+    G.target = b.y < LV.bAt(b.x, 4) - 24 && !G.everShale ? {x: b.x, y: b.y + 20} : {x: ax, y: mid};
+    drillUpdate(1/60);
+    if (G.blocked) break;
+  }
+  finishDrilling();
+  const sh = G.path.map((p, i) => i).filter(i => layerAt(G.path[i].x, G.path[i].y) === 4);
+  const a = sh[0], z = sh[sh.length - 1];
+  for (let k = 0; k < nCharges; k++){ const i = Math.round(lerp(a + 8, z - 8, nCharges > 1 ? k/(nCharges - 1) : .5)); const p = G.path[i]; G.charges.push({i, x: p.x, y: p.y}); }
+  computeFrack();
+  const L = LV.L, rev = G.eur*L.price/1e6;
+  return {dir, nCharges, len: Math.round(G.len*UNIT_M), lat: Math.round(G.lat*UNIT_M), inShale: +(G.shaleLen/G.afterShaleLen).toFixed(2), bbl: Math.round(G.eur), overlap: +G.overlap.toFixed(2), rev: +rev.toFixed(1), cost: +spent().toFixed(1), profit: +(rev - spent()).toFixed(1)};
+}
+
+layout();
+showTitle();
+if (location.hash === '#test'){
+  const out = [];
+  for (const dir of [1, -1]) for (const n of [3, 4, 5, 6]) out.push(autotest(dir, n));
+  const pre = document.createElement('pre'); pre.id = 'testout'; pre.textContent = JSON.stringify(out); document.body.appendChild(pre);
+}
+if (location.hash.startsWith('#shot-')){
+  const ph = location.hash.slice(6);
+  autotest(1, 5); G.charges = []; G.stim = false; stimCanvas = null; G.cracks = [];
+  if (ph === 'drill'){ startLevel(0); G.holding = true; for (let s = 0; s < 300; s++){ G.target = {x: G.bit.x + 14, y: G.bit.y + 10}; drillUpdate(1/60); } }
+  else {
+    for (const i of [180, 160, 140, 120, 100]) { const p = G.path[Math.min(i, G.path.length-1)]; G.charges.push({i, x: p.x, y: p.y}); }
+    if (ph === 'result'){ G.charges = []; for (let k = 0; k < 6; k++){ const i = 150 + k*12; const p = G.path[Math.min(i, G.path.length-1)]; G.charges.push({i, x: p.x, y: p.y}); } computeFrack(); G.prodT = PROD_DUR; showResult(); }
+    else if (ph !== 'charges'){ computeFrack(); G.phase = 'produce'; for (let s = 0; s < 200; s++) produceUpdate(1/60); for (const c of G.charges) c.boomed = true; }
+  }
+  $('title').classList.add('hidden'); refreshUI(true);
+}
+requestAnimationFrame(loop);
+</script>
+</body>
+</html>
